@@ -34,7 +34,7 @@ public class Main {
             // Construct aux variables
             int tickStack = 0;
             int lastArcEnd = 0;
-            int[] table = {1, 3, 5, 7};
+            int[] table = {0, 2, 4, 6};
             ArrayList<Double[]> arclist = new ArrayList<>();
             ArrayList<ArrayList<Double[]>> sortedArcList = new ArrayList<>();
             ArrayList<JsonObject> objList = new ArrayList<>();
@@ -88,6 +88,7 @@ public class Main {
                         if(object.contains("arctap")){
                             // Yep.
                             // Get timing for the start and end. Calculate position x and y.
+                            // System.out.println("trace.");
                             int t = object.indexOf("[");
                             String content = object.substring(4, t);
                             String tapArray = object.substring(t + 1, object.length() - 2);
@@ -121,7 +122,7 @@ public class Main {
                                 beats.add(400);
                                 arctap.addProperty("type", "Single");
                                 arctap.addProperty("lane", -1); // enable fuwafuwa lane
-                                arctap.addProperty("x", (intX * 2) + 3); // BanGroundX = 2 * intX + 3
+                                arctap.addProperty("x", (intX + 0.5) *3); // BanGroundX = (0.5 + intX) * 3
                                 arctap.addProperty("y", intY); // BanGroundY = intY
                                 arctap.add("beat", beats);
                                 objList.add(arctap);
@@ -130,6 +131,7 @@ public class Main {
 
                     }else{
                         // This arc object is a hittable normal object and will be converted to a slider.
+                        // System.out.println("Arc to slider.");
                         String content = object.substring(4, object.length() - 1);
                         String[] parameters = content.split(",");
                         double startT = Double.parseDouble(parameters[0]);
@@ -139,7 +141,7 @@ public class Main {
                         double startY = Double.parseDouble(parameters[5]);
                         double endY = Double.parseDouble(parameters[6]);
 
-                        Double[] item = {startT, endT, startX, endX, startY, endY};
+                        Double[] item = {startT, endT, (startX + 0.5) * 3, (endX + 0.5) * 3, startY, endY};
                         arclist.add(item); // Deal with them later.
                     }
 
@@ -201,9 +203,9 @@ public class Main {
 
             // Deal with arc list
             // Sort first
-            /*for(Double[] item : arclist){ // {startT, endT, startX, endX, startY, endY}
+            for(Double[] item : arclist){ // {startT, endT, startX, endX, startY, endY}
                 if(sortedArcList.size() == 0){
-                    System.out.println("First one.");
+                    // System.out.println("First one.");
                     ArrayList<Double[]> newArc = new ArrayList<>();
                     newArc.add(item);
                     sortedArcList.add(newArc);
@@ -211,94 +213,129 @@ public class Main {
                     for(ArrayList<Double[]> arcGroup : sortedArcList){
                         double endX = arcGroup.get(arcGroup.size() - 1)[3];
                         double endY = arcGroup.get(arcGroup.size() - 1)[5];
-                        System.out.println(endX + ":" + item[2]);
-                        System.out.println(endY + ":" + item[4]);
-                        if(item[2] == endX && item[4] == endY) {
-                            System.out.println("Matched.");
+                        double endT = arcGroup.get(arcGroup.size() - 1)[1];
+                        // System.out.println(endX + ":" + item[2]);
+                        // System.out.println(endY + ":" + item[4]);
+                        if(item[2] == endX && item[4] == endY && item[0] == endT) { // Not only x/y but also time should match.
+                            // System.out.println("Matched.");
                             arcGroup.add(item);
                             flag = true;
                             break;
                         }
-                        System.out.println("Next group.");
+                        // System.out.println("Next group.");
                     }
                     if(!flag){
-                        System.out.println("Nothing matched. Add a new group.");
+                        // System.out.println("Nothing matched. Add a new group.");
                         ArrayList<Double[]> newArc = new ArrayList<>();
                         newArc.add(item);
                         sortedArcList.add(newArc);
                     }
-                    System.out.println("");
+                    // System.out.println("");
                     flag = false;
                 }
-            }*/
+            }
             // then assign tickStack and write to notes block
-            /*for(ArrayList<Double[]> arcGroup : sortedArcList){
+            for(ArrayList<Double[]> arcGroup : sortedArcList){
                 for(Double[] arcItem : arcGroup){
-                    if(arcGroup.indexOf(arcItem) != arcGroup.size() - 1 && arcGroup.indexOf(arcItem) != 0){
-                        // Not the last one and not the first one
-                        JsonObject arcMiddle = new JsonObject();
-                        JsonArray timing1 = new JsonArray();
-                        timing1.add(0);
-                        timing1.add(arcItem[0].intValue());
-                        timing1.add(400);
-                        arcMiddle.addProperty("type", "SlideTick");
-                        arcMiddle.add("beat", timing1);
-                        arcMiddle.addProperty("lane", -1);
-                        arcMiddle.addProperty("x", arcItem[2]);
-                        arcMiddle.addProperty("y", arcItem[4]);
-                        arcMiddle.addProperty("tickStack", tickStack);
+                    if(arcGroup.size() != 1) {
+                        if (arcGroup.indexOf(arcItem) != arcGroup.size() - 1 && arcGroup.indexOf(arcItem) != 0) {
+                            // Not the last one and not the first one
+                            System.out.println("Middle part.");
+                            JsonObject arcMiddle = new JsonObject();
+                            JsonArray timing1 = new JsonArray();
+                            timing1.add(0);
+                            timing1.add(arcItem[0].intValue());
+                            timing1.add(400);
+                            arcMiddle.addProperty("type", "SlideTick");
+                            arcMiddle.add("beat", timing1);
+                            arcMiddle.addProperty("lane", -1);
+                            arcMiddle.addProperty("x", arcItem[2]);
+                            arcMiddle.addProperty("y", arcItem[4]);
+                            arcMiddle.addProperty("tickStack", tickStack);
 
-                        JsonObject arcEnd = new JsonObject();
-                        JsonArray timing2 = new JsonArray();
-                        timing2.add(0);
-                        timing2.add(arcItem[1].intValue());
-                        timing2.add(400);
-                        arcEnd.addProperty("type", "SlideTick");
-                        arcEnd.add("beat", timing2);
-                        arcEnd.addProperty("lane", -1);
-                        arcEnd.addProperty("x", arcItem[3]);
-                        arcEnd.addProperty("y", arcItem[5]);
-                        arcEnd.addProperty("tickStack", tickStack);
+                            JsonObject arcEnd = new JsonObject();
+                            JsonArray timing2 = new JsonArray();
+                            timing2.add(0);
+                            timing2.add(arcItem[1].intValue());
+                            timing2.add(400);
+                            arcEnd.addProperty("type", "SlideTick");
+                            arcEnd.add("beat", timing2);
+                            arcEnd.addProperty("lane", -1);
+                            arcEnd.addProperty("x", arcItem[3]);
+                            arcEnd.addProperty("y", arcItem[5]);
+                            arcEnd.addProperty("tickStack", tickStack);
 
-                        objList.add(arcMiddle);
-                        objList.add(arcEnd);
-                    }
-                    else if(arcGroup.indexOf(arcItem) == 0){
-                        // the first one
+                            objList.add(arcMiddle);
+                            objList.add(arcEnd);
+                        } else if (arcGroup.indexOf(arcItem) == 0) {
+                            // the first one
+                            System.out.println("First part.");
+                            JsonObject arcMiddle = new JsonObject();
+                            JsonArray timing1 = new JsonArray();
+                            timing1.add(0);
+                            timing1.add(arcItem[0].intValue());
+                            timing1.add(400);
+                            arcMiddle.addProperty("type", "Single");
+                            arcMiddle.add("beat", timing1);
+                            arcMiddle.addProperty("lane", -1);
+                            arcMiddle.addProperty("x", arcItem[2]);
+                            arcMiddle.addProperty("y", arcItem[4]);
+                            arcMiddle.addProperty("tickStack", tickStack);
+
+                            JsonObject arcEnd = new JsonObject();
+                            JsonArray timing2 = new JsonArray();
+                            timing2.add(0);
+                            timing2.add(arcItem[1].intValue());
+                            timing2.add(400);
+                            arcEnd.addProperty("type", "SlideTick");
+                            arcEnd.add("beat", timing2);
+                            arcEnd.addProperty("lane", -1);
+                            arcEnd.addProperty("x", arcItem[3]);
+                            arcEnd.addProperty("y", arcItem[5]);
+                            arcEnd.addProperty("tickStack", tickStack);
+
+                            objList.add(arcMiddle);
+                            objList.add(arcEnd);
+                        } else {
+                            // Last one
+                            System.out.println("Last part");
+                            JsonObject arcMiddle = new JsonObject();
+                            JsonArray timing1 = new JsonArray();
+                            timing1.add(0);
+                            timing1.add(arcItem[0].intValue());
+                            timing1.add(400);
+                            arcMiddle.addProperty("type", "SlideTick");
+                            arcMiddle.add("beat", timing1);
+                            arcMiddle.addProperty("lane", -1);
+                            arcMiddle.addProperty("x", arcItem[2]);
+                            arcMiddle.addProperty("y", arcItem[4]);
+                            arcMiddle.addProperty("tickStack", tickStack);
+
+                            JsonObject arcEnd = new JsonObject();
+                            JsonArray timing2 = new JsonArray();
+                            timing2.add(0);
+                            timing2.add(arcItem[1].intValue());
+                            timing2.add(400);
+                            arcEnd.addProperty("type", "SlideTickEnd");
+                            arcEnd.add("beat", timing2);
+                            arcEnd.addProperty("lane", -1);
+                            arcEnd.addProperty("x", arcItem[3]);
+                            arcEnd.addProperty("y", arcItem[5]);
+                            arcEnd.addProperty("tickStack", tickStack);
+
+                            objList.add(arcMiddle);
+                            objList.add(arcEnd);
+
+                            tickStack++;
+                        }
+                    }else{
+                        System.out.println("Only one.");
                         JsonObject arcMiddle = new JsonObject();
                         JsonArray timing1 = new JsonArray();
                         timing1.add(0);
                         timing1.add(arcItem[0].intValue());
                         timing1.add(400);
                         arcMiddle.addProperty("type", "Single");
-                        arcMiddle.add("beat", timing1);
-                        arcMiddle.addProperty("lane", -1);
-                        arcMiddle.addProperty("x", arcItem[2]);
-                        arcMiddle.addProperty("y", arcItem[4]);
-                        arcMiddle.addProperty("tickStack", tickStack);
-
-                        JsonObject arcEnd = new JsonObject();
-                        JsonArray timing2 = new JsonArray();
-                        timing2.add(0);
-                        timing2.add(arcItem[1].intValue());
-                        timing2.add(400);
-                        arcEnd.addProperty("type", "SlideTick");
-                        arcEnd.add("beat", timing2);
-                        arcEnd.addProperty("lane", -1);
-                        arcEnd.addProperty("x", arcItem[3]);
-                        arcEnd.addProperty("y", arcItem[5]);
-                        arcEnd.addProperty("tickStack", tickStack);
-
-                        objList.add(arcMiddle);
-                        objList.add(arcEnd);
-                    }else{
-                        // Last one
-                        JsonObject arcMiddle = new JsonObject();
-                        JsonArray timing1 = new JsonArray();
-                        timing1.add(0);
-                        timing1.add(arcItem[0].intValue());
-                        timing1.add(400);
-                        arcMiddle.addProperty("type", "SlideTick");
                         arcMiddle.add("beat", timing1);
                         arcMiddle.addProperty("lane", -1);
                         arcMiddle.addProperty("x", arcItem[2]);
@@ -323,7 +360,7 @@ public class Main {
                         tickStack++;
                     }
                 }
-            }*/
+            }
 
             objList.sort(Comparator.comparingInt(o -> o.get("beat").getAsJsonArray().get(1).getAsInt()));
             for(JsonObject obj : objList){
