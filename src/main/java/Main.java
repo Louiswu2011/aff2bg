@@ -74,6 +74,7 @@ public class Main {
                     // Audio offset line. Omitted to avoid the offset difference between the two audio engine.
                     // Still needed to calculate beat position.
                     originalOffset = Integer.parseInt(object.split(":")[1]);
+                    // originalOffset = 0; // Temporary disable it
 
                 }else if(object.startsWith("-")){
                     // Separator. Omitted.
@@ -141,7 +142,7 @@ public class Main {
                         double startY = Double.parseDouble(parameters[5]);
                         double endY = Double.parseDouble(parameters[6]);
 
-                        Double[] item = {startT, endT, (startX + 0.5) * 3, (endX + 0.5) * 3, startY, endY};
+                        Double[] item = {startT + originalOffset, endT + originalOffset, (startX + 0.5) * 3, (endX + 0.5) * 3, startY, endY};
                         arclist.add(item); // Deal with them later.
                     }
 
@@ -240,7 +241,7 @@ public class Main {
                     if(arcGroup.size() != 1) {
                         if (arcGroup.indexOf(arcItem) != arcGroup.size() - 1 && arcGroup.indexOf(arcItem) != 0) {
                             // Not the last one and not the first one
-                            System.out.println("Middle part.");
+                            // System.out.println("Middle part.");
                             JsonObject arcMiddle = new JsonObject();
                             JsonArray timing1 = new JsonArray();
                             timing1.add(0);
@@ -269,7 +270,7 @@ public class Main {
                             objList.add(arcEnd);
                         } else if (arcGroup.indexOf(arcItem) == 0) {
                             // the first one
-                            System.out.println("First part.");
+                            // System.out.println("First part.");
                             JsonObject arcMiddle = new JsonObject();
                             JsonArray timing1 = new JsonArray();
                             timing1.add(0);
@@ -298,7 +299,7 @@ public class Main {
                             objList.add(arcEnd);
                         } else {
                             // Last one
-                            System.out.println("Last part");
+                            // System.out.println("Last part");
                             JsonObject arcMiddle = new JsonObject();
                             JsonArray timing1 = new JsonArray();
                             timing1.add(0);
@@ -329,7 +330,7 @@ public class Main {
                             tickStack++;
                         }
                     }else{
-                        System.out.println("Only one.");
+                        // System.out.println("Only one.");
                         JsonObject arcMiddle = new JsonObject();
                         JsonArray timing1 = new JsonArray();
                         timing1.add(0);
@@ -370,7 +371,15 @@ public class Main {
             chart.add("notes", notes);
 
             // Write converted json to file
-            System.out.println(chart.toString());
+            String outputFileLocation = affFile.getParent() + "\\" + diffname + ".json";
+            File jsonFile = new File(outputFileLocation);
+            if (!jsonFile.exists()) {
+                jsonFile.createNewFile();
+            }
+            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(jsonFile));
+            bufferedWriter.write(chart.toString());
+            bufferedWriter.close();
+            System.out.println("Output file at " + outputFileLocation);
         } catch (FileNotFoundException e){
             System.out.println("ERROR: File not found.");
         } catch (IOException e) {
